@@ -1,0 +1,321 @@
+// Prisma Schema - Sistem Informasi Direktori Interaktif RPNN Depok
+// Generator & Datasource Configuration
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------
+// A. Modul Autentikasi & Pengaturan Akses
+// ------------------------------------------------------
+
+model Role {
+  id        String   @id @default(uuid()) @db.Char(36)
+  namaRole  String   @map("nama_role") @db.VarChar(50)
+  deskripsi String?  @db.Text
+  users     User[]
+
+  @@map("roles")
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Char(36)
+  roleId        String   @map("role_id") @db.Char(36)
+  namaLengkap   String   @map("nama_lengkap") @db.VarChar(100)
+  email         String   @unique @db.VarChar(100)
+  password      String   @db.VarChar(255)
+  fotoProfil    String?  @map("foto_profil") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  role                Role                 @relation(fields: [roleId], references: [id])
+  edukasi             Edukasi[]
+  resep               Resep[]
+  restoran            Restoran[]
+  wisataHalal         WisataHalal[]
+  ulasanRestoran      UlasanRestoran[]
+  komentar            Komentar[]
+  favorit             Favorit[]
+  pengaturanKonten    PengaturanKonten[]
+  logAktivitasAdmin   LogAktivitasAdmin[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------
+// B. Modul Pengelolaan Konten & Media (CMS Engine)
+// ------------------------------------------------------
+
+model KategoriEdukasi {
+  id           String    @id @default(uuid()) @db.Char(36)
+  namaKategori String    @map("nama_kategori") @db.VarChar(100)
+  slug         String    @unique @db.VarChar(100)
+  edukasi      Edukasi[]
+
+  @@map("kategori_edukasi")
+}
+
+enum StatusPublikasi {
+  Draft
+  Published
+}
+
+model Edukasi {
+  id                String          @id @default(uuid()) @db.Char(36)
+  kategoriEdukasiId String          @map("kategori_edukasi_id") @db.Char(36)
+  adminId           String          @map("admin_id") @db.Char(36)
+  judul             String          @db.VarChar(255)
+  slug              String          @unique @db.VarChar(255)
+  isiKonten         String          @map("isi_konten") @db.LongText
+  statusPublikasi   StatusPublikasi @default(Draft) @map("status_publikasi")
+  viewCount         Int             @default(0) @map("view_count")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  kategoriEdukasi KategoriEdukasi @relation(fields: [kategoriEdukasiId], references: [id])
+  admin           User            @relation(fields: [adminId], references: [id])
+  mediaKonten     MediaKonten[]
+
+  @@map("edukasi")
+}
+
+enum TipeMedia {
+  Infografis
+  Audio
+  Video
+  PDF
+  Gambar
+}
+
+model MediaKonten {
+  id         String    @id @default(uuid()) @db.Char(36)
+  edukasiId  String    @map("edukasi_id") @db.Char(36)
+  tipeMedia  TipeMedia @map("tipe_media")
+  urlFile    String    @map("url_file") @db.VarChar(255)
+  keterangan String?   @db.VarChar(255)
+
+  edukasi Edukasi @relation(fields: [edukasiId], references: [id], onDelete: Cascade)
+
+  @@map("media_konten")
+}
+
+enum TingkatKesulitan {
+  Mudah
+  Sedang
+  Sulit
+}
+
+model Resep {
+  id               String           @id @default(uuid()) @db.Char(36)
+  adminId          String           @map("admin_id") @db.Char(36)
+  judulResep       String           @map("judul_resep") @db.VarChar(200)
+  slug             String           @unique @db.VarChar(200)
+  deskripsi        String           @db.Text
+  porsi            Int
+  waktuMasakMenit  Int              @map("waktu_masak_menit")
+  tingkatKesulitan TingkatKesulitan @map("tingkat_kesulitan")
+  informasiGizi    String?          @map("informasi_gizi") @db.Text
+  fotoResep        String           @map("foto_resep") @db.VarChar(255)
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  admin        User          @relation(fields: [adminId], references: [id])
+  bahanResep   BahanResep[]
+  langkahResep LangkahResep[]
+
+  @@map("resep")
+}
+
+model BahanResep {
+  id           String  @id @default(uuid()) @db.Char(36)
+  resepId      String  @map("resep_id") @db.Char(36)
+  namaBahan    String  @map("nama_bahan") @db.VarChar(150)
+  takaran      String  @db.VarChar(100)
+  catatanHalal String? @map("catatan_halal") @db.Text
+
+  resep Resep @relation(fields: [resepId], references: [id], onDelete: Cascade)
+
+  @@map("bahan_resep")
+}
+
+model LangkahResep {
+  id          String  @id @default(uuid()) @db.Char(36)
+  resepId     String  @map("resep_id") @db.Char(36)
+  nomorUrutan Int     @map("nomor_urutan")
+  instruksi   String  @db.Text
+  fotoStep    String? @map("foto_step") @db.VarChar(255)
+
+  resep Resep @relation(fields: [resepId], references: [id], onDelete: Cascade)
+
+  @@map("langkah_resep")
+}
+
+// ------------------------------------------------------
+// C. Modul Direktori Interaktif & Geolokasi
+// ------------------------------------------------------
+
+model KategoriKuliner {
+  id           String     @id @default(uuid()) @db.Char(36)
+  namaKategori String     @map("nama_kategori") @db.VarChar(100)
+  icon         String?    @db.VarChar(100)
+  restoran     Restoran[]
+
+  @@map("kategori_kuliner")
+}
+
+enum StatusSertifikasi {
+  Terverifikasi_BPJPH @map("Terverifikasi BPJPH")
+  Self_Declare        @map("Self Declare")
+  Proses
+}
+
+model Restoran {
+  id                   String            @id @default(uuid()) @db.Char(36)
+  kategoriKulinerId    String            @map("kategori_kuliner_id") @db.Char(36)
+  adminId              String            @map("admin_id") @db.Char(36)
+  namaRestoran         String            @map("nama_restoran") @db.VarChar(150)
+  alamat               String            @db.Text
+  kecamatan            String            @db.VarChar(100)
+  latitude             Decimal?          @db.Decimal(10, 8)
+  longitude            Decimal?          @db.Decimal(11, 8)
+  nomorSertifikatHalal String?           @map("nomor_sertifikat_halal") @db.VarChar(100)
+  statusSertifikasi    StatusSertifikasi @map("status_sertifikasi")
+  jamOperasional       String            @map("jam_operasional") @db.VarChar(100)
+  kisaranHarga         String            @map("kisaran_harga") @db.VarChar(100)
+  fotoUtama            String            @map("foto_utama") @db.VarChar(255)
+  createdAt            DateTime          @default(now()) @map("created_at")
+
+  kategoriKuliner KategoriKuliner  @relation(fields: [kategoriKulinerId], references: [id])
+  admin           User             @relation(fields: [adminId], references: [id])
+  ulasanRestoran  UlasanRestoran[]
+
+  @@map("restoran")
+}
+
+model WisataHalal {
+  id             String           @id @default(uuid()) @db.Char(36)
+  adminId        String           @map("admin_id") @db.Char(36)
+  namaDestinasi  String           @map("nama_destinasi") @db.VarChar(150)
+  kategoriWisata String           @map("kategori_wisata") @db.VarChar(100)
+  lokasi         String           @db.Text
+  kecamatan      String           @db.VarChar(100)
+  latitude       Decimal?         @db.Decimal(10, 8)
+  longitude      Decimal?         @db.Decimal(11, 8)
+  deskripsi      String           @db.Text
+  hargaTiket     String           @map("harga_tiket") @db.VarChar(100)
+  jamBuka        String           @map("jam_buka") @db.VarChar(100)
+  fotoDestinasi  String           @map("foto_destinasi") @db.VarChar(255)
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  admin          User             @relation(fields: [adminId], references: [id])
+  fasilitasHalal FasilitasHalal[]
+
+  @@map("wisata_halal")
+}
+
+model FasilitasHalal {
+  id             String      @id @default(uuid()) @db.Char(36)
+  wisataId       String      @map("wisata_id") @db.Char(36)
+  jenisFasilitas String      @map("jenis_fasilitas") @db.VarChar(100)
+  jarakMeter     Int?        @map("jarak_meter")
+  keterangan     String?     @db.Text
+
+  wisataHalal WisataHalal @relation(fields: [wisataId], references: [id], onDelete: Cascade)
+
+  @@map("fasilitas_halal")
+}
+
+// ------------------------------------------------------
+// D. Modul Interaksi & Komunitas Pengunjung
+// ------------------------------------------------------
+
+model UlasanRestoran {
+  id         String   @id @default(uuid()) @db.Char(36)
+  restoranId String   @map("restoran_id") @db.Char(36)
+  userId     String   @map("user_id") @db.Char(36)
+  rating     Int      @db.TinyInt
+  komentar   String   @db.Text
+  fotoUlasan String?  @map("foto_ulasan") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  restoran Restoran @relation(fields: [restoranId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ulasan_restoran")
+}
+
+enum TipeEntitasKomentar {
+  Edukasi
+  Resep
+}
+
+model Komentar {
+  id          String              @id @default(uuid()) @db.Char(36)
+  userId      String              @map("user_id") @db.Char(36)
+  tipeEntitas TipeEntitasKomentar @map("tipe_entitas")
+  entitasId   String              @map("entitas_id") @db.Char(36)
+  isiKomentar String              @map("isi_komentar") @db.Text
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("komentar")
+}
+
+enum TipeEntitasFavorit {
+  Edukasi
+  Resep
+  Restoran
+  Wisata
+}
+
+model Favorit {
+  id          String             @id @default(uuid()) @db.Char(36)
+  userId      String             @map("user_id") @db.Char(36)
+  tipeEntitas TipeEntitasFavorit @map("tipe_entitas")
+  entitasId   String             @map("entitas_id") @db.Char(36)
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("favorit")
+}
+
+// ------------------------------------------------------
+// E. Modul Dashboard Admin & Pusat Kendali
+// ------------------------------------------------------
+
+model PengaturanKonten {
+  id           String   @id @default(uuid()) @db.Char(36)
+  adminId      String   @map("admin_id") @db.Char(36)
+  namaSetting  String   @map("nama_setting") @db.VarChar(100)
+  nilaiSetting String   @map("nilai_setting") @db.Text
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@map("pengaturan_konten")
+}
+
+enum AksiAdmin {
+  Create
+  Update
+  Delete
+}
+
+model LogAktivitasAdmin {
+  id          String    @id @default(uuid()) @db.Char(36)
+  adminId     String    @map("admin_id") @db.Char(36)
+  aksi        AksiAdmin
+  modulTarget String    @map("modul_target") @db.VarChar(100)
+  keterangan  String    @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@map("log_aktivitas_admin")
+}
