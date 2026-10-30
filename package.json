@@ -5,5 +5,9 @@
     "lucide-react": "^1.61.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.19.3",
+    "prisma": "^6.19.3"
   }
 }
