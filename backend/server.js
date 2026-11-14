@@ -20,14 +20,18 @@ app.use('/api/auth', authRoute);
 app.use('/api/admin', adminRoute);
 app.use('/api', publicRoute);  // publik: /api/search, /api/public/*
 
-// Test Endpoint Root 
-app.get('/', (req, res) => { 
+// Test Endpoint Root / Health Check
+app.get(['/', '/api'], (req, res) => { 
   res.json({ 
     message: 'API Halal Channel siap digunakan.' 
   }); 
 }); 
 
-// Jalankan Server 
-app.listen(PORT, () => { 
-  console.log(`Server Backend berjalan di http://localhost:${PORT}`); 
-});
+// Jalankan Server jika dieksekusi secara mandiri
+if (require.main === module || !process.env.VERCEL) {
+  app.listen(PORT, () => { 
+    console.log(`Server Backend berjalan di http://localhost:${PORT}`); 
+  });
+}
+
+module.exports = app;

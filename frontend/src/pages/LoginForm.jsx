@@ -99,7 +99,7 @@ const LoginForm = ({ isModal = false, onClose }) => {
       if (err.response && err.response.data && err.response.data.message) {
         setServerError(err.response.data.message);
       } else if (err.request) {
-        setServerError('Tidak dapat terhubung ke server backend. Pastikan server Express aktif di port 5000.');
+        setServerError('Tidak dapat terhubung ke server backend. Pastikan server backend sedang aktif.');
       } else {
         setServerError('Terjadi kesalahan saat memproses permintaan login.');
       }
